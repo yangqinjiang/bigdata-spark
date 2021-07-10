@@ -183,5 +183,6 @@
     <orderEntry type="library" name="Maven: org.apache.hbase:hbase-client:1.2.0" level="project" />
     <orderEntry type="library" name="Maven: org.jruby.jcodings:jcodings:1.0.8" level="project" />
     <orderEntry type="library" name="Maven: org.jruby.joni:joni:2.1.2" level="project" />
+    <orderEntry type="library" name="Maven: mysql:mysql-connector-java:8.0.19" level="project" />
   </component>
 </module>
