@@ -21,7 +21,7 @@
     <!-- spark连接上hadoop-->
     <property>
         <name>fs.defaultFS</name>
-        <value>hdfs://localhost:9000</value>
+        <value>hdfs://hadoop102:9000</value>
     </property>
 </configuration>
 

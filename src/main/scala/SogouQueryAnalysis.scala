@@ -23,6 +23,7 @@ object SogouQueryAnalysis {
       // a. 创建SparkConf对象，设置应用配置信息
       val sparkConf = new SparkConf().setMaster("local[2]")
         .setAppName(this.getClass.getSimpleName.stripSuffix("$"))
+        .set("spark.testing.memory","471859200")
 
       // b. 创建SparkContext, 有就获取，没有就创建，建议使用
       val context = SparkContext.getOrCreate(sparkConf)
@@ -31,7 +32,7 @@ object SogouQueryAnalysis {
 
     sc.setLogLevel("WARN")
     // TODO: 1本地读取 SogouQ用户查询日志数据
-//    val rawLogsRDD: RDD[String] = sc.textFile("/datas/sogou/SogouQ.sample")
+    //val rawLogsRDD: RDD[String] = sc.textFile("/datas/sogou/SogouQ.sample")
     val rawLogsRDD: RDD[String] = sc.textFile("/datas/sogou/SogouQ.reduced")
     println(s"Count = ${rawLogsRDD.count()}")
 
