@@ -14,9 +14,14 @@ object SparkTop10Movie {
       .master("local[4]")
      .config("spark.testing.memory", "471859200") //
       .appName(this.getClass.getSimpleName.stripSuffix("$"))
-    //todo: 设置shuffle时分区数目
+    //todo: 设置shuffle时分区数目,默认值是200
       .config("spark.sql.shuffle.partitions","4")
       .getOrCreate()
+
+    System.set
+
+    //在这里加上HADOOP_USER_NAME用户配置,解决报错问题。
+//    System.getProperties.setProperty("HADOOP_USER_NAME", "root")
 
     //导入隐式转换
     import spark.implicits._
@@ -96,15 +101,16 @@ val rawRatingsDS = spark.read.textFile("/datas/ml-1m/ratings.dat")
           new Properties()
         )
     //2 保存csv文件,每行数据中字段之间使用逗号隔开
+    //设置运行参数 vm args:  -DHADOOP_USER_NAME=atguigu
     resultDF.coalesce(1)
       .write
       .mode("overwrite")
-        .csv("/datas/top10-movies")
+        .csv("/datas/top10-movies2")
 
 
     //释放缓存数据
     resultDF.unpersist()
-
+    Thread.sleep(10000000)
     spark.stop()
   }
 }
