@@ -17,6 +17,7 @@ object SparkUtils {
     //设置输出文件算法
       .set("spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version", "2")
       .set("spark.debug.maxToStringFields", "20000")
+      .set("spark.testing.memory","471859200")
 
     //2 判断应用是否本地模式运行,如果是设置值
     if(ApplicationConfig.APP_LOCAL_MODE){
