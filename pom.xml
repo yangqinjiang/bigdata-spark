@@ -94,6 +94,19 @@
             <artifactId>spark-hive-thriftserver_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
         </dependency>
+        <!-- 管理配置文件 -->
+        <dependency>
+            <groupId>com.typesafe</groupId>
+            <artifactId>config</artifactId>
+            <version>1.2.1</version>
+        </dependency>
+
+        <!-- 根据ip转换为省市区 -->
+        <dependency>
+            <groupId>org.lionsoul</groupId>
+            <artifactId>ip2region</artifactId>
+            <version>1.7.2</version>
+        </dependency>
     </dependencies>
     <build>
         <outputDirectory>target/classes</outputDirectory>
