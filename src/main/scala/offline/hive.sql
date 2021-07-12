@@ -121,8 +121,8 @@ OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat';
 -- STORED AS PARQUET ;
 
 -- 待DataFrame将数据保存Hive表
-SHOW CREATE TABLE itcast_ads.pmt_ads_info ;
+SHOW CREATE TABLE itcast_ads.pmt_ads_info;
 SHOW PARTITIONS itcast_ads.pmt_ads_info ;
 SELECT ip, province, city FROM itcast_ads.pmt_ads_info WHERE date_str = '' limit 10;
 -- 删除分区表数据
-ALTER TABLE itcast_ads.pmt_ads_info DROP IF EXISTS PARTITION (date_str='2020-04-23');
+ALTER TABLE itcast_ads.pmt_ads_info DROP IF EXISTS PARTITION (date_str='2021-07-11');

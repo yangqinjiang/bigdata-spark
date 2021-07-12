@@ -5,7 +5,7 @@ import offline.utils.{IpUtils, SparkUtils}
 import org.apache.spark.SparkFiles
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{StringType, StructType}
-import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 import org.lionsoul.ip2region.{DbConfig, DbSearcher}
 import org.apache.spark.sql.functions._
 // 1. 创建SparkSession实例对象
@@ -60,13 +60,39 @@ object PmtEtlRunner {
     // c. 将RDD转换为DataFrame
     val df: DataFrame = spark.createDataFrame(newRowsRDD, newSchema)
     // d. 添加一列日期字段，作为分区列
+    // 昨天的数据
     df.withColumn("date_str", date_sub(current_date(), 1).cast(StringType))
+  }
+  /**
+   * 保存数据到Parquet文件,列式存储
+   * @return
+   */
+  def saveAsParquet(etlDF: DataFrame) = {
+    etlDF
+      //降低分区数目,保存文件时为一个文件
+      .coalesce(1)
+      .write
+      //选择覆盖保存模式,如果失败再次运行保存,不存在重复数据
+      .mode(SaveMode.Overwrite)
+      .partitionBy("date_str")
+      .parquet("/spark/dataset/pmt-etl/")
+  }
+  /**
+   * 保存数据到Hive分区表中,按照日期字段分区
+   * @return
+   */
+  def saveAsHiveTable(etlDF: DataFrame) = {
+    etlDF
+      .coalesce(1)
+      .write
+      .format("hive")
+      .mode(SaveMode.Append)
+      .partitionBy("date_str")
+      .saveAsTable("itcast_ads.pmt_ads_info")
   }
 
   def main(args: Array[String]): Unit = {
-    //设置Spark应用程序运行的用户,root ,默认情况下为当前系统用户
-    System.setProperty("user.name", "root")
-    System.setProperty("HADOOP_USER_NAME", "root")
+
     //1 创建sparkSession实例对象
     val spark = SparkUtils.createSparkSession(this.getClass)
     import spark.implicits._
@@ -81,6 +107,10 @@ object PmtEtlRunner {
 
     etlDF.printSchema()
     etlDF.select($"ip", $"province", $"city", $"date_str").show(10, truncate = false)
+
+    //4保存ETL数据到Hive分区表
+//    saveAsParquet(etlDF)
+    saveAsHiveTable(etlDF) // vm options: -DHADOOP_USER_NAME=atguigu
     spark.stop()
   }
 }
