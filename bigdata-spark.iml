@@ -238,5 +238,12 @@
     <orderEntry type="library" name="Maven: org.apache.thrift:libthrift:0.9.3" level="project" />
     <orderEntry type="library" name="Maven: org.apache.thrift:libfb303:0.9.3" level="project" />
     <orderEntry type="library" name="Maven: org.apache.derby:derby:10.12.1.1" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.spark:spark-hive-thriftserver_2.11:2.4.5" level="project" />
+    <orderEntry type="library" name="Maven: org.spark-project.hive:hive-cli:1.2.1.spark2" level="project" />
+    <orderEntry type="library" name="Maven: jline:jline:2.12" level="project" />
+    <orderEntry type="library" name="Maven: org.spark-project.hive:hive-jdbc:1.2.1.spark2" level="project" />
+    <orderEntry type="library" name="Maven: org.spark-project.hive:hive-beeline:1.2.1.spark2" level="project" />
+    <orderEntry type="library" name="Maven: net.sf.supercsv:super-csv:2.2.0" level="project" />
+    <orderEntry type="library" name="Maven: net.sf.jpam:jpam:1.1" level="project" />
   </component>
 </module>
