@@ -7,6 +7,7 @@ import org.apache.spark.storage.StorageLevel
 /**
  * 需求：对电影评分数据进行统计分析，获取Top10电影（电影评分平均值最高，并且每个电影被评分的次数大于2000)
  */
+////设置运行参数 vm args:  -DHADOOP_USER_NAME=atguigu
 object SparkTop10Movie {
 
   def main(args: Array[String]): Unit = {
@@ -18,7 +19,7 @@ object SparkTop10Movie {
       .config("spark.sql.shuffle.partitions","4")
       .getOrCreate()
 
-    System.set
+
 
     //在这里加上HADOOP_USER_NAME用户配置,解决报错问题。
 //    System.getProperties.setProperty("HADOOP_USER_NAME", "root")
