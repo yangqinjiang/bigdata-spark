@@ -21,7 +21,7 @@ object ApplicationConfig {
   //数据库连接四要素信息
   lazy val MYSQL_JDBC_DRIVER:String = config.getString("mysql.jdbc.driver")
   lazy val MYSQL_JDBC_URL:String = config.getString("mysql.jdbc.url")
-  lazy val MYSQL_JDBC_STRING:String = config.getString("mysql.jdbc.username")
+  lazy val MYSQL_JDBC_USERNAME:String = config.getString("mysql.jdbc.username")
   lazy val MYSQL_JDBC_PASSWORD:String = config.getString("mysql.jdbc.password")
 
   //数据文件存储路径

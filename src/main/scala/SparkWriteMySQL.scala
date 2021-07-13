@@ -67,7 +67,7 @@ object SparkWriteMySQL {
       //val insertSql = "INSERT INTO db_test.tb_wordcount(word,count) VALUES(?,?)"
 
       //如果word已存在,则更新count值
-      val insertSql = "INSERT INTO db_test.tb_wordcount(word,count) VALUES(?,?) ON DUPLICATE KEY UPDATE `count` = ?"
+      val insertSql = "INSERT INTO db_test.tb_wordcount(word,count) VALUES(?,?) ON DUPLICATE KEY UPDATE `count` = VALUES(count)"
       pstmt = conn.prepareStatement(insertSql)
       conn.setAutoCommit(false)
 
@@ -75,7 +75,6 @@ object SparkWriteMySQL {
       datas.foreach { case (word, count) =>
         pstmt.setString(1, word)
         pstmt.setLong(2, count.toLong)
-        pstmt.setLong(3, count.toLong)
         //加入批次
         pstmt.addBatch()
       }
