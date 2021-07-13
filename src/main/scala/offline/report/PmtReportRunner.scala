@@ -43,9 +43,9 @@ object PmtReportRunner {
      */
 
     //3.1 各地域分布统计: region_stat_analysis
-    RegionStateReport.doReport(pmtDF)
+    //RegionStateReport.doReport(pmtDF)
     // 3.2. 广告区域统计：ads_region_analysis
-    //AdsRegionAnalysisReport.doReport(pmtDF)
+    AdsRegionAnalysisReport.doReport(pmtDF)
     // 3.3. 广告APP统计：ads_app_analysis
     //AdsAppAnalysisReport.processData(pmtDF)
     // 3.4. 广告设备统计：ads_device_analysis

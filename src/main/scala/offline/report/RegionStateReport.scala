@@ -7,20 +7,6 @@ import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.{DataFrame, Row, SaveMode}
 
 /*
--- 创建数据库，不存在时创建
--- DROP DATABASE IF EXISTS itcast_ads_report;
-CREATE DATABASE IF NOT EXISTS itcast_ads_report;
-USE itcast_ads_report;
--- 创建表
--- DROP TABLE IF EXISTS itcast_ads_report.region_stat_analysis ;
-CREATE TABLE `itcast_ads_report`.`region_stat_analysis` (
-`report_date` varchar(255) NOT NULL,
-`province` varchar(255) NOT NULL,
-`city` varchar(255) NOT NULL,
-`count` bigint DEFAULT NULL,
-PRIMARY KEY (`report_date`,`province`,`city`) ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-
 
  */
 
