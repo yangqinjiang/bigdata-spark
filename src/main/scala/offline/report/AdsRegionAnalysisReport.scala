@@ -174,6 +174,96 @@ object AdsRegionAnalysisReport {
       if (null != conn) conn.close()
     }
   }
+  def saveToMySQL2(iter: Iterator[Row],
+                   db_table:String,
+                   primaryKeyTupleSeq:Seq[(String, String)],
+                   updateKeyTupleSeq:Seq[(String, String)]): Unit = {
+    //加载驱动类
+    Class.forName(ApplicationConfig.MYSQL_JDBC_DRIVER)
+    //声明变量
+    var conn: Connection = null
+    var pstmt: PreparedStatement = null
+    try {
+      //b获取连接
+      conn =  DriverManager.getConnection(
+        ApplicationConfig.MYSQL_JDBC_URL, //
+        ApplicationConfig.MYSQL_JDBC_USERNAME, //
+        ApplicationConfig.MYSQL_JDBC_PASSWORD
+      )
+
+      //问号占位符
+      val h = "?" * (primaryKeyTupleSeq.size + updateKeyTupleSeq.size)
+      val holder = h.split("").mkString(",").toString
+
+
+      val primaryKeyTupleWithIndex: Seq[((String, String), Int)] = primaryKeyTupleSeq.zipWithIndex
+      val primaryKey = {
+        primaryKeyTupleSeq.map(tuple => tuple._1).mkString(",")
+      }
+
+      val updateKeyTupleWithIndex: Seq[((String, String), Int)] = updateKeyTupleSeq.zipWithIndex
+      val updateKey:String = {
+        updateKeyTupleSeq.map(_._1).mkString(",")
+      }
+
+      val duplicateKeyUpdate: Seq[String] = updateKeyTupleSeq.map(word => word._1+"=VALUES("+word._1+")")
+      val duplicateKeyUpdateString = duplicateKeyUpdate.mkString(",")
+      //c 获取preparedStatement对象
+      val insertSql =
+        s"""
+          |INSERT INTO
+          | ${db_table}
+          |  (${primaryKey},${updateKey})
+          | VALUES(${holder})
+          |  ON DUPLICATE KEY UPDATE ${duplicateKeyUpdateString}
+          |""".stripMargin
+
+      pstmt = conn.prepareStatement(insertSql)
+      val beforeCommitStatus = conn.getAutoCommit //保存一下原来的自动提交状态
+      // 不自动提交
+      conn.setAutoCommit(false)
+      // 将分区中数据插入到表中,批量插入
+      // 采用批量插入的方式将RDD分区数据插入到MySQL表中，提升性能
+      iter.foreach { row =>
+
+        //primaryKey
+        primaryKeyTupleWithIndex.foreach(p => {
+          val x: ((String, String), Int) = p
+
+          x._1._2.trim.toLowerCase match {
+            case "string" => pstmt.setString(x._2 + 1, row.getAs[String](x._1._1))
+            case "double" => pstmt.setDouble(x._2 + 1, row.getAs[Double](x._1._1))
+          }
+        })
+        //duplicateKeyUpdate
+        updateKeyTupleWithIndex.foreach(p => {
+          val x: ((String, String), Int) = p
+//          println(x)
+//          println(x._2 + 1 + primaryKeyTupleWithIndex.size)
+//          println(x._1._1)
+          x._1._2.trim.toLowerCase match {
+            case "long" => pstmt.setLong(x._2 + 1 + primaryKeyTupleWithIndex.size, row.getAs[Long](x._1._1))
+            case "double" => pstmt.setDouble(x._2 + 1 + primaryKeyTupleWithIndex.size, row.getAs[Double](x._1._1))
+          }
+
+        })
+        //加入批次
+        pstmt.addBatch()
+
+      }
+      //批量插入
+      pstmt.executeBatch()
+      conn.commit()
+      conn.setAutoCommit(beforeCommitStatus) // 恢复原来的自动提交状态
+
+
+    } catch {
+      case e: Exception => e.printStackTrace()
+    } finally {
+      if (null != pstmt) pstmt.close()
+      if (null != conn) conn.close()
+    }
+  }
 
   /**
    * 使用DSL方式计算广告投放报表
@@ -325,6 +415,30 @@ object AdsRegionAnalysisReport {
 //    resultDF.show(20, truncate = false)
     resultDF.select("report_date","province","city").show(2)
 //    saveResultToMySQL(resultDF)
-    resultDF.coalesce(1).rdd.foreachPartition(iter => saveToMySQL(iter))
+//    resultDF.coalesce(1).rdd.foreachPartition(iter => saveToMySQL(iter))
+    resultDF.coalesce(1).rdd.foreachPartition(iter =>{
+
+      val db_table = "itcast_ads_report.ads_region_analysis"
+      val primaryKeyTupleSeq: Seq[(String, String)] = Seq(
+        ("report_date","String"),
+        ("province","String"),
+        ("city","String"))
+      val updateKeyTupleSeq: Seq[(String, String)] = Seq(
+        ("orginal_req_cnt","Long"),
+        ("valid_req_cnt","Long"),
+        ("ad_req_cnt","Long"),
+        ("join_rtx_cnt","Long"),
+        ("success_rtx_cnt","Long"),
+        ("ad_show_cnt","Long"),
+        ("ad_click_cnt","Long"),
+        ("media_show_cnt","Long"),
+        ("media_click_cnt","Long"),
+        ("dsp_pay_money","Long"),
+        ("dsp_cost_money","Long"),
+        ("success_rtx_rate","double"),
+        ("ad_click_rate","double"),
+        ("media_click_rate","double"))
+      saveToMySQL2(iter,db_table,primaryKeyTupleSeq,updateKeyTupleSeq)
+    })
   }
 }
