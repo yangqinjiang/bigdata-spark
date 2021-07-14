@@ -1,8 +1,10 @@
 package offline.report
 
+import java.sql.{Connection, DriverManager, PreparedStatement}
+
 import offline.config.ApplicationConfig
 import org.apache.spark.sql.types.StringType
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
 
 /**
  * 广告区域统计：ads_region_analysis，区域维度：省份和城市
@@ -87,25 +89,110 @@ object AdsRegionAnalysisReport {
       .option("dbtable", "itcast_ads_report.ads_region_analysis")
       .save()
   }
+  /**
+   * 保存数据至MySQL数据库，使用函数foreachPartition对每个分区数据操作，主键存在时更新，不存在时插入
+   *
+   * @param iter
+   */
+  def saveToMySQL(iter: Iterator[Row]): Unit = {
+    //加载驱动类
+    Class.forName(ApplicationConfig.MYSQL_JDBC_DRIVER)
+    //声明变量
+    var conn: Connection = null
+    var pstmt: PreparedStatement = null
+    try {
+      //b获取连接
+      conn =  DriverManager.getConnection(
+        ApplicationConfig.MYSQL_JDBC_URL, //
+        ApplicationConfig.MYSQL_JDBC_USERNAME, //
+        ApplicationConfig.MYSQL_JDBC_PASSWORD
+      )
+      //c 获取preparedStatement对象
+      val insertSql =
+        """
+          |INSERT INTO
+          | itcast_ads_report.ads_region_analysis
+          |  (report_date,province,city,orginal_req_cnt,valid_req_cnt,ad_req_cnt,join_rtx_cnt,success_rtx_cnt,ad_show_cnt,ad_click_cnt,media_show_cnt,media_click_cnt,dsp_pay_money,dsp_cost_money,success_rtx_rate,ad_click_rate,media_click_rate)
+          | VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+          |  ON DUPLICATE KEY UPDATE
+          |     orginal_req_cnt=VALUES(orginal_req_cnt),
+          |     valid_req_cnt=VALUES(valid_req_cnt),
+          |     ad_req_cnt=VALUES(ad_req_cnt),
+          |     join_rtx_cnt=VALUES(join_rtx_cnt),
+          |     success_rtx_cnt=VALUES(success_rtx_cnt),
+          |     ad_show_cnt=VALUES(ad_show_cnt),
+          |     ad_click_cnt=VALUES(ad_click_cnt),
+          |     media_show_cnt=VALUES(media_show_cnt),
+          |     media_click_cnt=VALUES(media_click_cnt),
+          |     dsp_pay_money=VALUES(dsp_pay_money),
+          |     dsp_cost_money=VALUES(dsp_cost_money),
+          |     success_rtx_rate=VALUES(success_rtx_rate),
+          |     ad_click_rate=VALUES(ad_click_rate),
+          |     media_click_rate=VALUES(media_click_rate)
+          |""".stripMargin
+
+      pstmt = conn.prepareStatement(insertSql)
+      val beforeCommitStatus = conn.getAutoCommit //保存一下原来的自动提交状态
+      // 不自动提交
+      conn.setAutoCommit(false)
+      // 将分区中数据插入到表中,批量插入
+      // 采用批量插入的方式将RDD分区数据插入到MySQL表中，提升性能
+      iter.foreach { row =>
+        pstmt.setString(1, row.getAs[String]("report_date"))
+        pstmt.setString(2, row.getAs[String]("province"))
+        pstmt.setString(3, row.getAs[String]("city"))
+        pstmt.setLong(4, row.getAs[Long]("orginal_req_cnt"))
+        pstmt.setLong(5, row.getAs[Long]("valid_req_cnt"))
+        pstmt.setLong(6, row.getAs[Long]("ad_req_cnt"))
+        pstmt.setLong(7, row.getAs[Long]("join_rtx_cnt"))
+        pstmt.setLong(8, row.getAs[Long]("success_rtx_cnt"))
+        pstmt.setLong(9, row.getAs[Long]("ad_show_cnt"))
+        pstmt.setLong(10, row.getAs[Long]("ad_click_cnt"))
+        pstmt.setLong(11, row.getAs[Long]("media_show_cnt"))
+        pstmt.setLong(12, row.getAs[Long]("media_click_cnt"))
+        pstmt.setLong(13, row.getAs[Long]("dsp_pay_money"))
+        pstmt.setLong(14, row.getAs[Long]("dsp_cost_money"))
+        //三率
+        pstmt.setDouble(15, row.getAs[Double]("success_rtx_rate"))
+        pstmt.setDouble(16, row.getAs[Double]("ad_click_rate"))
+        pstmt.setDouble(17, row.getAs[Double]("media_click_rate"))
+
+        //加入批次
+        pstmt.addBatch()
+
+      }
+      //批量插入
+      pstmt.executeBatch()
+      conn.commit()
+      conn.setAutoCommit(beforeCommitStatus) // 恢复原来的自动提交状态
+
+
+    } catch {
+      case e: Exception => e.printStackTrace()
+    } finally {
+      if (null != pstmt) pstmt.close()
+      if (null != conn) conn.close()
+    }
+  }
 
   /**
    * 使用DSL方式计算广告投放报表
    */
-  def reportWithDql(dataframe: DataFrame): DataFrame = {
+  def reportWithDsl(dataframe: DataFrame): DataFrame = {
     // i. 导入隐式转换及函数库
 
     import dataframe.sparkSession.implicits._
     import org.apache.spark.sql.functions._
 
     // ii 报表开发
-    dataframe
+    var reportDF: DataFrame = dataframe
       //第一步,按照维度分组,省份和城市
       .groupBy($"province", $"city")
       //第二步,使用agg进行聚合操作,主要使用CASE...WHEN...函数和SUM函数
       .agg(
         //原始请求: requestmode = 1 and processnode >= 1
         sum(
-          when($"requestmode".equalTo(1).and($"processnode".geq(1)), 1).otherwise(0),
+          when($"requestmode".equalTo(1).and($"processnode".geq(1)), 1).otherwise(0)
         ).as("orginal_req_cnt"),
         // 有效请求：requestmode = 1 and processnode >= 2
         sum(
@@ -215,7 +302,7 @@ object AdsRegionAnalysisReport {
         date_sub(current_date(), 1).cast(StringType)
       )
     // iii. 返回结果数据
-    dataframe
+    reportDF
     
   }
 
@@ -232,10 +319,12 @@ object AdsRegionAnalysisReport {
     //上述SQL使用子查询方式，需要两次注册DataFrame为临时视图，编写SQL语句，可以使用With As语句优化。
     //    val resultDF:DataFrame = reportWithSql(dataframe)//sql编程
     //    val resultDF:DataFrame = reportWithKpiSql(dataframe)//sql编程
-    val resultDF: DataFrame = reportWithDql(dataframe) //dsl编程
+    val resultDF: DataFrame = reportWithDsl(dataframe) //dsl编程
 
     // 第二,保存数据
-    resultDF.show(20, truncate = false)
-    saveResultToMySQL(resultDF)
+//    resultDF.show(20, truncate = false)
+    resultDF.select("report_date","province","city").show(2)
+//    saveResultToMySQL(resultDF)
+    resultDF.coalesce(1).rdd.foreachPartition(iter => saveToMySQL(iter))
   }
 }
