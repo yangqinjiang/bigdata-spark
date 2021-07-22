@@ -247,5 +247,7 @@
     <orderEntry type="library" name="Maven: net.sf.jpam:jpam:1.1" level="project" />
     <orderEntry type="library" name="Maven: com.typesafe:config:1.2.1" level="project" />
     <orderEntry type="library" name="Maven: org.lionsoul:ip2region:1.7.2" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.spark:spark-sql-kafka-0-10_2.11:2.4.5" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.kafka:kafka-clients:2.0.0" level="project" />
   </component>
 </module>
