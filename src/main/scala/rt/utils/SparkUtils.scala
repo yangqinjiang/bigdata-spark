@@ -22,6 +22,7 @@ object SparkUtils {
       .setAppName(clazz.getSimpleName.stripSuffix("$"))
       .set("spark.debug.maxToStringFields","2000")
       .set("spark.sql.debug.maxToStringFields","2000")
+      .set("spark.testing.memory", "471859200")
 
     // 2,判断应用是否本地模式运行,如果是设置值
     if(ApplicationConfig.APP_LOCAL_MODE){

@@ -7,12 +7,15 @@ import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.apache.kafka.common.serialization.StringSerializer
 import org.json4s.DefaultFormats
 import org.json4s.jackson.Json
+import rt.config.ApplicationConfig
 
 import scala.util.Random
 
 /**
  * 实时产生交易订单数据，使用Json4J类库转换数据为JSON字符，发送Kafka Topic
  * 中
+ *
+ * kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic orderTopic --from-beginning
  */
 object MockOrderProducer {
 
@@ -39,7 +42,7 @@ object MockOrderProducer {
         (1 to batchNumber).foreach { number =>
           val currentTime: Long = System.currentTimeMillis()
           val orderId: String = s"${getDate(currentTime)}%06d".format(number)
-          val userId: String = s"{1+random.nextInt(5)}%08d".format(random.nextInt(1000))
+          val userId: String = s"${1+random.nextInt(5)}%08d".format(random.nextInt(1000))
           val orderTime: String = getDate(currentTime, format = "yyyy-MM-dd HH:mm:ss.SSS")
           val orderMoney: String = s"${5 + random.nextInt(500)}.%02d".format(random.nextInt(100))
           val orderStatus: Int = allStatus(random.nextInt(allStatus.length))
@@ -49,7 +52,7 @@ object MockOrderProducer {
           val orderJson = new Json(DefaultFormats).write(orderRecord)
           println(orderJson)
 
-          val record = new ProducerRecord[String, String]("orderTopic", orderJson)
+          val record = new ProducerRecord[String, String](ApplicationConfig.KAFKA_SOURCE_TOPICS, orderJson)
           // 5. 发送数据：def send(messages: KeyedMessage[K,V]*), 将数据发送到Topic
           producer.send(record)
         }
