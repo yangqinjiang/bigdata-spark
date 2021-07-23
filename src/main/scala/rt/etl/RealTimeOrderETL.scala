@@ -3,17 +3,22 @@ package rt.etl
 import org.apache.spark.SparkFiles
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.expressions.UserDefinedFunction
-import org.apache.spark.sql.functions.{get_json_object, udf, to_json, struct}
+import org.apache.spark.sql.functions.{get_json_object, struct, to_json, udf}
 import org.apache.spark.sql.streaming.OutputMode
 import org.apache.spark.sql.types.IntegerType
 import org.apache.spark.sql.{DataFrame, Dataset}
 import org.lionsoul.ip2region.{DataBlock, DbConfig, DbSearcher}
 import rt.config.ApplicationConfig
-import rt.utils.SparkUtils
+import rt.utils.{SparkUtils, StreamingUtils}
 
 /**
  * 订单数据实时ETL：实时从Kafka Topic 消费数据，进行过滤转换ETL，将其发送Kafka Topic，以便实时处理
  * TODO：基于StructuredStreaming实现，Kafka作为Source和Sink
+ * 上述代码中有两个细节，对于流式应用来说很关键：
+ * 第一、从Kafka消费数据时，通过属性【maxOffsetsPerTrigger】，设置每批次最大数据量，实
+ * 际生产项目需要结合流式数据波峰及应用运行资源综合考虑设置；
+ *  第二、将ETL后数据保存至Kafka Topic中，设置检查点位置CheckpointLocation，便于流式应用
+ * 运行失败后，可以从Checkpoint恢复，继续上次消费数据，进行实时处理；
  */
 object RealTimeOrderETL extends Logging {
 
@@ -92,6 +97,8 @@ object RealTimeOrderETL extends Logging {
     val kafkaStreamDF: DataFrame = spark.readStream.format("kafka")
       .option("kafka.bootstrap.servers", ApplicationConfig.KAFKA_BOOTSTRAP_SERVERS)
       .option("subscribe", ApplicationConfig.KAFKA_SOURCE_TOPICS)
+      //从Kafka消费数据时，通过属性【maxOffsetsPerTrigger】，设置每批次最大数据量，实
+      //际生产项目需要结合流式数据波峰及应用运行资源综合考虑设置；
       .option("maxOffsetsPerTrigger", ApplicationConfig.KAFKA_MAX_OFFSETS)
       .load()
 
@@ -103,10 +110,14 @@ object RealTimeOrderETL extends Logging {
       .format("kafka")
       .option("kafka.bootstrap.servers", ApplicationConfig.KAFKA_BOOTSTRAP_SERVERS)
       .option("topic", ApplicationConfig.KAFKA_ETL_TOPIC)
+      //将ETL后数据保存至Kafka Topic中，设置检查点位置CheckpointLocation，便于流式应用
+      //运行失败后，可以从Checkpoint恢复，继续上次消费数据，进行实时处理；
       .option("checkpointLocation", ApplicationConfig.STREAMING_ETL_CKPT) // 检查点目录
       .start()
-    query.awaitTermination()
-    query.stop()
+//    query.awaitTermination()
+//    query.stop()
+    //优雅关闭停止StreamingQuery
+    StreamingUtils.stopStructuredStreaming(query,ApplicationConfig.STOP_ETL_FILE)
 
   }
 }
