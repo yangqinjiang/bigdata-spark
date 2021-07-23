@@ -35,6 +35,7 @@ object MockOrderProducer {
       val random: Random = new Random()
       //订单状态: 订单打开0, 订单取消1,订单关闭2,订单完成3
       val allStatus = Array(0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+      var i = 0
       while (true) {
         //每次循环,模拟产生的订单数目
         //每次订单数量
@@ -50,7 +51,9 @@ object MockOrderProducer {
           val orderRecord = OrderRecord(orderId, userId, orderTime, getRandomIp, orderMoney.toDouble, orderStatus)
           //转换为json字符串
           val orderJson = new Json(DefaultFormats).write(orderRecord)
-          println(orderJson)
+          i+=1
+          if (0 == i % 20)println(".")else print (".")
+
 
           val record = new ProducerRecord[String, String](ApplicationConfig.KAFKA_SOURCE_TOPICS, orderJson)
           // 5. 发送数据：def send(messages: KeyedMessage[K,V]*), 将数据发送到Topic

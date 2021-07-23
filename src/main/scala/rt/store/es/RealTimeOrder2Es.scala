@@ -57,6 +57,9 @@ object RealTimeOrder2Es {
       .option("es.index.auto.create", ApplicationConfig.ES_INDEX_AUTO_CREATE)
       .option("es.write.operation", ApplicationConfig.ES_WRITE_OPERATION)
       .option("es.mapping.id", ApplicationConfig.ES_MAPPING_ID)
+      // 出现Spark连接不上es的问题
+      //https://stackoverflow.com/questions/47651162/connecting-spark-and-elasticsearch
+      .option("es.nodes.wan.only","true")
       .start(ApplicationConfig.ES_INDEX_NAME)
 
     StreamingUtils.stopStructuredStreaming(query,ApplicationConfig.STOP_ES_FILE)
