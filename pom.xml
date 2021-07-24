@@ -136,6 +136,12 @@
             <artifactId>elasticsearch-spark-20_2.11</artifactId>
             <version>6.0.0</version>
         </dependency>
+        <!-- JSON解析库：fastjson -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.47</version>
+        </dependency>
     </dependencies>
     <build>
         <outputDirectory>target/classes</outputDirectory>

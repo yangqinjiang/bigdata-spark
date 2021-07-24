@@ -294,5 +294,6 @@
     <orderEntry type="library" name="Maven: org.elasticsearch.plugin:percolator-client:6.0.0" level="project" />
     <orderEntry type="library" name="Maven: org.elasticsearch.plugin:parent-join-client:6.0.0" level="project" />
     <orderEntry type="library" name="Maven: org.elasticsearch:elasticsearch-spark-20_2.11:6.0.0" level="project" />
+    <orderEntry type="library" name="Maven: com.alibaba:fastjson:1.2.47" level="project" />
   </component>
 </module>
