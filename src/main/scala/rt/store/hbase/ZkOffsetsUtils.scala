@@ -32,7 +32,7 @@ object ZkOffsetsUtils {
     topics.foreach { topicName =>
       //i, 获取Topic有多少个分区,需要到zookeeper上读取, 通过zkClient获取某个ZNode孩子数
       //路径基于Kafka chroot生成,: /brokers/topics/testTopic/partitions
-      val children: Int = zkClient.countChildren(ZkUtils.getTopicPartitionPath(topicName))
+      val children: Int = zkClient.countChildren(ZkUtils.getTopicPartitionsPath(topicName))
       // ii. 依据分区，到Zookeeper中获取对应偏移量；如果不存在，偏移量就是0L
       (0 until children).foreach { partitionId =>
         // 1-----------------------------start--------------------------1

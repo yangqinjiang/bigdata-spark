@@ -51,7 +51,7 @@ object SparkUtils {
           .set("spark.debug.maxToStringFields", "2000")
           .set("spark.sql.debug.maxToStringFields", "2000")
           .set("spark.streaming.stopGracefullyOnShutdown", "true") // 优雅停止spark服务
-
+          .set("spark.testing.memory", "471859200")
         //其中应用开发本地模式运行时设置的相关属性，在测试和生成环境使用spark-submit提交应用，
         //通过--conf指定此属性的值
         if (ApplicationConfig.APP_LOCAL_MODE) {

@@ -1,7 +1,7 @@
 package rt.store.hbase
 
 import kafka.message.MessageAndMetadata
-import org.apache.commons.codec.StringDecoder
+import kafka.serializer.StringDecoder
 import org.apache.spark.TaskContext
 import org.apache.spark.internal.Logging
 import org.apache.spark.streaming.StreamingContext
@@ -33,20 +33,29 @@ object RealTimeOrder2HBase extends Logging {
       val fromOffsets = ZkOffsetsUtils.loadFromOffsets(topics, groupId)
       logWarning("===================== Start Streaming From Offsets ====================")
       logWarning(s"${fromOffsets.mkString(", ")}")
+
       // 3) 从Kafka Topic中获取每条数据以后的处理方式，此处获取Offset和Message（Value）
-      val messageHandler = (mam: MessageAndMetadata[String, String]) => mam.message()
+      val messageHandler = (mam: MessageAndMetadata[String, String]) => {
+        logWarning("1----------><------------")
+        mam.message()
+      }
+      logWarning("2----------><------------")
       // 4) 采用Direct方式从Kafka Topic中pull拉取数据
       KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder, String](
         ssc, kafkaParams, //
         fromOffsets, //
         messageHandler //
       )
-    }
-    kafkaDStream.print(10)
 
+    }
+    logWarning("3----------><------------")
+//    kafkaDStream.print(10)
+
+    kafkaDStream.print(10)
+    logWarning("4----------><------------")
     // 2. 将获取的数据，插入到HBase表中
     // kafkaDStream 直接从Kafka Topic中获取的数据，KafkaRDD就是直接获取的Topic的数据，未进行任何处理
-    kafkaDStream.foreachRDD { (rdd, time) =>
+    if(false)kafkaDStream.foreachRDD { (rdd, time) =>
       logWarning(s"=======================${time.milliseconds}=======================")
       // =========================================================================
       if (!rdd.isEmpty()) {

@@ -1,7 +1,7 @@
 package rt.store.hbase
 
 import com.alibaba.fastjson.JSON
-import org.apache.hadoop.hbase.client.{Connection, ConnectionFactory, HTable, Put}
+import org.apache.hadoop.hbase.client.{Connection, ConnectionFactory, Durability, HTable, Put}
 import org.apache.hadoop.hbase.util.Bytes
 import org.apache.hadoop.hbase.{HBaseConfiguration, TableName}
 import rt.config.ApplicationConfig
@@ -25,6 +25,9 @@ object HBaseDao {
     conf.set("hbase.zookeeper.quorum", ApplicationConfig.HBASE_ZK_HOSTS)
     conf.set("hbase.zookeeper.property.clientPort", ApplicationConfig.HBASE_ZK_PORT)
     conf.set("zookeeper.znode.parent", ApplicationConfig.HBASE_ZK_ZNODE)
+    println(conf.get("hbase.zookeeper.quorum"))
+    println(conf.get("hbase.zookeeper.property.clientPort"))
+    println(conf.get("zookeeper.znode.parent"))
     //返回connection实例对象
     ConnectionFactory.createConnection(conf)
   }
@@ -83,7 +86,7 @@ object HBaseDao {
         val put: Put = new Put(rowKey)
         // 由于etl操作, 数据量很大,实时进行写入HBase表中,为了提高性能,跳过WAL
         //但有有丢失数据的可能性
-        //        put.setDurability(Durability.SKIP_WAL)
+        put.setDurability(Durability.SKIP_WAL)
         //iv.依据列名获取值
         columns.foreach { column =>
           put.addColumn(cfBytes, Bytes.toBytes(column),
@@ -91,13 +94,17 @@ object HBaseDao {
         }
         //v, 加入list中
         puts.add(put)
+        println(put.toJSON)
       }
+      println("size="+puts.size())
       //批量插入数据
       htable.put(puts)
+      println("putOK")
       true
     } catch {
       case e: Exception => e.printStackTrace(); false
     } finally {
+      println("finally")
       if (null != htable) htable.close()
     }
   }
