@@ -1,6 +1,9 @@
 package rt.report
 
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SaveMode}
+import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.internal.Logging
+import org.apache.spark.sql.expressions.UserDefinedFunction
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SaveMode, SparkSession}
 import rt.config.ApplicationConfig
 import rt.utils.{SparkUtils, StreamingUtils}
 import org.apache.spark.sql.functions._
@@ -14,26 +17,30 @@ import org.apache.spark.sql.types.DoubleType
  * - 第三、重点城市销售额：city
  * "北京市", "上海市", "深圳市", "广州市", "杭州市", "成都市", "南京市", "武汉市", "西安市"
  */
-object RealTimeOrderReport {
+object RealTimeOrderReport extends Logging{
 
   /**
    * 实时统计,总销售额,使用sum函数
    *
-   * @param orderStreamDF
+   * @param streamDF
    * @return
    */
   def reportAmtTotal(streamDF: DataFrame) = {
     // 导入隐式转换
     import streamDF.sparkSession.implicits._
     //业务 计算 ， DataFrame = Dataset[Row]
-    val resultStreamDF: Dataset[Row] = streamDF.agg(sum($"money").as("total_amt"))
+    val resultStreamDF: Dataset[Row] = streamDF
+      .agg(sum($"money").as("total_amt"))
       .withColumn("total", lit("global"))
+    logWarning("call reportAmtTotal...")
     // 输出redis及启动流式应用
-    resultStreamDF.writeStream.outputMode(OutputMode.Update()).queryName("query-amt-total")
+    resultStreamDF.writeStream
+      .outputMode(OutputMode.Update())
+      .queryName("query-amt-total")
       .option("checkpointLocation", ApplicationConfig.STREAMING_AMT_TOTAL_CKPT)
       //结果输出 到redis
       .foreachBatch {
-        (batchDF: DataFrame, _: Long) => {}
+        (batchDF: DataFrame, _: Long) =>
           batchDF.coalesce(1)
             .groupBy()
             .pivot($"total").sum("total_amt")
@@ -43,15 +50,86 @@ object RealTimeOrderReport {
             .option("host", ApplicationConfig.REDIS_HOST)
             .option("port", ApplicationConfig.REDIS_PORT)
             .option("dbNum", ApplicationConfig.REDIS_DB)
-            .option("table", "orders.money")
+            .option("table", "orders:money")
             .option("key.column", "type")
             .save() // 流式应用，需要启动start
-      }
+
+      }.start()
   }
 
-  def reportAmtProvince(orderStreamDF: DataFrame) = ???
+  def reportAmtProvince(streamDF: DataFrame) = {
+    // 导入隐式转换
+    import streamDF.sparkSession.implicits._
+    //业务 计算 ， DataFrame = Dataset[Row]
+    val resultStreamDF: Dataset[Row] = streamDF
+      //按照省份province分组,求和
+        .groupBy($"province")
+      .agg(sum($"money").as("total_amt"))
 
-  def reportAmtCity(orderStreamDF: DataFrame) = ???
+    // 输出redis及启动流式应用
+    resultStreamDF.writeStream
+      .outputMode(OutputMode.Update())
+      .queryName("query-amt-province")
+      .option("checkpointLocation", ApplicationConfig.STREAMING_AMT_PROVINCE_CKPT)
+      //结果输出 到redis
+      .foreachBatch {
+        (batchDF: DataFrame, _: Long) =>
+          batchDF.coalesce(1)
+            .groupBy()
+            .pivot($"province").sum("total_amt")
+            .withColumn("type", lit("province"))
+            .write.mode(SaveMode.Append)
+            .format("org.apache.spark.sql.redis")
+            .option("host", ApplicationConfig.REDIS_HOST)
+            .option("port", ApplicationConfig.REDIS_PORT)
+            .option("dbNum", ApplicationConfig.REDIS_DB)
+            .option("table", "orders:money")
+            .option("key.column", "type")
+            .save() // 流式应用，需要启动start
+      }.start()
+  }
+
+  //实时统计, 重点城市cities销售额,按照city城市分组
+  def reportAmtCity(streamDF: DataFrame) = {
+    val session:SparkSession=streamDF.sparkSession
+    // 导入隐式转换
+    import streamDF.sparkSession.implicits._
+
+    val cities:Array[String] = Array("北京市","上海市","深圳市","广州市","杭州市","成都市","南京市","武汉市","西安市")
+
+    //广播变量
+    val citiesBroadcast: Broadcast[Array[String]] = session.sparkContext.broadcast(cities)
+    //自定义UDF函数, 判断 是否重点城市
+    val city_is_contains: UserDefinedFunction = udf((cityName: String) => citiesBroadcast.value.contains(cityName))
+    //业务 计算 ， DataFrame = Dataset[Row]
+    val resultStreamDF: Dataset[Row] = streamDF
+        .filter(city_is_contains($"city")) //过滤重点省份订单
+      //按照省份province分组,求和
+      .groupBy($"city")
+      .agg(sum($"money").as("total_amt"))
+
+    // 输出redis及启动流式应用
+    resultStreamDF.writeStream
+      .outputMode(OutputMode.Update())
+      .queryName("query-amt-city")
+      .option("checkpointLocation", ApplicationConfig.STREAMING_AMT_CITY_CKPT)
+      //结果输出 到redis
+      .foreachBatch {
+        (batchDF: DataFrame, _: Long) =>
+          batchDF.coalesce(1)
+            .groupBy()
+            .pivot($"city").sum("total_amt")
+            .withColumn("type", lit("city"))// 添加一列, 统计类型
+            .write.mode(SaveMode.Append)
+            .format("org.apache.spark.sql.redis")
+            .option("host", ApplicationConfig.REDIS_HOST)
+            .option("port", ApplicationConfig.REDIS_PORT)
+            .option("dbNum", ApplicationConfig.REDIS_DB)
+            .option("table", "orders:money")
+            .option("key.column", "type")
+            .save() // 流式应用，需要启动start
+      }.start()
+  }
 
   def main(args: Array[String]): Unit = {
     //1 获取sparkSession实例对象
