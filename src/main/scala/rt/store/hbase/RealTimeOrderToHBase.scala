@@ -2,7 +2,6 @@ package rt.store.hbase
 
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.streaming.{OutputMode, StreamingQuery}
-import org.apache.spark.sql.types.{StringType, StructType}
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import rt.config.ApplicationConfig
 import rt.utils.{SparkUtils, StreamingUtils}
@@ -26,15 +25,15 @@ object RealTimeOrderToHBase extends Logging {
       .load()
     // 3. 解析JSON格式数据，封装到DataFrame中，包含各个字段信息
     // 定义一个Schema信息
-    val orderSchema: StructType = new StructType()
-      .add("orderId", StringType, nullable = true)
-      .add("userId", StringType, nullable = true)
-      .add("orderTime", StringType, nullable = true)
-      .add("ip", StringType, nullable = true)
-      .add("orderMoney", StringType, nullable = true)
-      .add("orderStatus", StringType, nullable = true)
-      .add("province", StringType, nullable = true)
-      .add("city", StringType, nullable = true)
+//    val orderSchema: StructType = new StructType()
+//      .add("orderId", StringType, nullable = true)
+//      .add("userId", StringType, nullable = true)
+//      .add("orderTime", StringType, nullable = true)
+//      .add("ip", StringType, nullable = true)
+//      .add("orderMoney", StringType, nullable = true)
+//      .add("orderStatus", StringType, nullable = true)
+//      .add("province", StringType, nullable = true)
+//      .add("city", StringType, nullable = true)
     /*
     {"orderId":"20200818160415420000002","userId":"500000246","orderTime":"2020-08-18 16:04:1
     5.420","ip":"61.232.85.68","orderMoney":"222.52","orderStatus":0,"province":"浙江省","city":"杭州市"}
@@ -56,24 +55,39 @@ object RealTimeOrderToHBase extends Logging {
       // TODO: 调用foreachBatch函数，将每批次DataFrame数据存储至HBase表中
       .foreachBatch { (batchDF: DataFrame, _: Long) =>
         logWarning("foreachBath")
-        batchDF.rdd.foreachPartition { iter =>
-          val datas: Iterator[String] = iter.map(row => row.getAs[String]("value"))
-          datas.foreach(println)
-          val isInsertSuccess: Boolean = HBaseDao.insert(
-            ApplicationConfig.HBASE_ORDER_TABLE,
-            ApplicationConfig.HBASE_ORDER_TABLE_FAMILY,
-            ApplicationConfig.HBASE_ORDER_TABLE_COLUMNS,
-            datas
-          )
-          logWarning(s"Insert Datas To HBase: $isInsertSuccess")
+        if(!batchDF.isEmpty){
+          logWarning(s"batchDF NOT isEmpty , foreachPartition...")
+          batchDF.rdd.foreachPartition { iter =>
+            val datas: Iterator[String] = iter.map(row => row.getAs[String]("value"))
+//            logWarning("datas size = "+datas.size)// TODO: 不能执行这行代码,否则导致HBaseDao.insert函数里的datas参数为空集合
+            val isInsertSuccess: Boolean = HBaseDao.insert(
+              ApplicationConfig.HBASE_ORDER_TABLE,
+              ApplicationConfig.HBASE_ORDER_TABLE_FAMILY,
+              ApplicationConfig.HBASE_ORDER_TABLE_COLUMNS,
+              datas
+            )
+            logWarning(s"Insert Datas To HBase: $isInsertSuccess")
+          }
+        }else{
+          logWarning(s"batchDF.isEmpty")
         }
+
+
       }
 
       // 设置检查点目录
       .option("checkpointLocation", "datas/order-apps/ckpt/hbase-ckpt2/")
       .start()
 
+    //4.构建StreamQuery 将结果写出去 --细化
+    val query2 = orderStreamDS.writeStream
+      .outputMode(OutputMode.Append()) //表示全量输出，等价于Storm的updateStateByKey
+      .format("console") //输出到控制台
+      .option("truncate", "false")
+      .start()
+
     // TODO: 5. 通过扫描HDFS文件，优雅的关闭停止StreamingQuery
     StreamingUtils.stopStructuredStreaming(query, "datas/order-apps/stop/hbase-stop2")
+    StreamingUtils.stopStructuredStreaming(query2, "datas/order-apps/stop/hbase-stop2")
   }
 }

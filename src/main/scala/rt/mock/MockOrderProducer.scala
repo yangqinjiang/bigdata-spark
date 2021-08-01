@@ -24,7 +24,7 @@ object MockOrderProducer {
     try {
       // 1,kafka client producer配置信息
       val props = new Properties()
-      props.put("bootstrap.servers", "kafka:9092")
+      props.put("bootstrap.servers", "hadoop102:9092")
       props.put("acks", "1")
       props.put("retries", "3")
       props.put("key.serializer", classOf[StringSerializer].getName)

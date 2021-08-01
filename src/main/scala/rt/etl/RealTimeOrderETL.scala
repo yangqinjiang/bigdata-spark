@@ -104,7 +104,7 @@ object RealTimeOrderETL extends Logging {
 
     //3 ETL操作
     val etlStreamDF = streamingProcess(kafkaStreamDF)
-
+    logWarning("query...")
     //4 针对流式应用来说,输出的是流
     val query = etlStreamDF.writeStream.outputMode(OutputMode.Append())
       .format("kafka")
@@ -114,6 +114,7 @@ object RealTimeOrderETL extends Logging {
       //运行失败后，可以从Checkpoint恢复，继续上次消费数据，进行实时处理；
       .option("checkpointLocation", ApplicationConfig.STREAMING_ETL_CKPT) // 检查点目录
       .start()
+    logWarning("Running...")
 //    query.awaitTermination()
 //    query.stop()
     //优雅关闭停止StreamingQuery
