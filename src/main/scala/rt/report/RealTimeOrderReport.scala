@@ -3,12 +3,12 @@ package rt.report
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.expressions.UserDefinedFunction
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SaveMode, SparkSession}
-import rt.config.ApplicationConfig
-import rt.utils.{SparkUtils, StreamingUtils}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.streaming.OutputMode
-import org.apache.spark.sql.types.DoubleType
+import org.apache.spark.sql.types.DataTypes
+import org.apache.spark.sql._
+import rt.config.ApplicationConfig
+import rt.utils.{SparkUtils, StreamingUtils}
 
 /**
  * 实时订单报表：从Kafka Topic实时消费订单数据，进行销售订单额统计，结果实时存储Redis数据库，维度如下：
@@ -149,7 +149,9 @@ object RealTimeOrderReport extends Logging{
       .filter(record => null != record && record.trim.split(",").length > 0)
       //提取字段,orderMoney,province,city
       .select(
-        get_json_object($"value", "$.orderMoney").cast(DoubleType).as("money"),
+//        get_json_object($"value", "$.orderMoney").cast(DoubleType).as("money"),
+        //解决Double 精度丢失的问题
+        get_json_object($"value", "$.orderMoney").cast(DataTypes.createDecimalType(10,2)).as("money"),
         get_json_object($"value", "$.province").as("province"),
         get_json_object($"value", "$.city").as("city")
       )
