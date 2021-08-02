@@ -24,8 +24,15 @@ object MockOrderProducer {
     try {
       // 1,kafka client producer配置信息
       val props = new Properties()
-      props.put("bootstrap.servers", "hadoop102:9092")
-      props.put("acks", "1")
+      props.put("bootstrap.servers", ApplicationConfig.KAFKA_BOOTSTRAP_SERVERS)
+
+      /**
+       * ack=1，简单来说就是，producer只要收到一个分区副本成功写入的通知就认为推送消息成功了。这里有一个地方需要注意，这个副本必须是leader副本。只有leader副本成功写入了，producer才会认为消息发送成功。
+       *
+       * 注意，ack的默认值就是1。这个默认值其实就是吞吐量与可靠性的一个折中方案。生产上我们可以根据实际情况进行调整，比如如果你要追求高吞吐量，那么就要放弃可靠性。
+
+       */
+      props.put("acks", "1")//Kafka的ack机制，指的是producer的消息发送确认机制
       props.put("retries", "3")
       props.put("key.serializer", classOf[StringSerializer].getName)
       props.put("value.serializer", classOf[StringSerializer].getName)

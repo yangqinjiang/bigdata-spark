@@ -30,6 +30,10 @@ Streaming流式应用，检查点目录
   lazy val STREAMING_AMT_TOTAL_CKPT: String = config.getString("streaming.amt.total.ckpt")
   lazy val STREAMING_AMT_PROVINCE_CKPT: String = config.getString("streaming.amt.province.ckpt")
   lazy val STREAMING_AMT_CITY_CKPT: String = config.getString("streaming.amt.city.ckpt")
+  //每日统计的
+  lazy val STREAMING_AMT_DAILY_TOTAL_CKPT: String = config.getString("streaming.amt.daily.total.ckpt")
+  lazy val STREAMING_AMT_DAILY_PROVINCE_CKPT: String = config.getString("streaming.amt.daily.province.ckpt")
+  lazy val STREAMING_AMT_DAILY_CITY_CKPT: String = config.getString("streaming.amt.daily.city.ckpt")
   /*
   Streaming流式应用，停止文件
   */
