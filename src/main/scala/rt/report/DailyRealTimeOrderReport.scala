@@ -31,7 +31,7 @@ object DailyRealTimeOrderReport extends Logging {
         val redisKey = row.getAs[String]("key")
         val redisField = row.getAs[String]("field")
         val redisValue = row.getAs[String]("value")
-        println(s"key = $redisKey, field = $redisKey, value = $redisValue")
+        println(s"key = $redisKey, field = $redisField, value = $redisValue")
         //调用hset插入redis哈希中
         jedis.hset(redisKey, redisField, redisValue)
       }
